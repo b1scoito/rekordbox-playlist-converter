@@ -5,15 +5,15 @@ description = "Convert Rekordbox playlists with automatic format selection for P
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "biscoito", email = "eu@biscoito.eu"}
 ]
-license = {text = "MIT"}
+license = {text = "GNU GPLv3"}
 keywords = ["rekordbox", "cdj", "xdj", "pioneer-dj", "playlist", "converter", "mp3", "flac", "music"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "Topic :: Multimedia :: Sound/Audio :: Conversion",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU GPLv3 License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -27,9 +27,9 @@ dependencies = [
 rekordbox-converter = "main:app"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/rekordbox-playlist-converter"
-Repository = "https://github.com/yourusername/rekordbox-playlist-converter"
-Issues = "https://github.com/yourusername/rekordbox-playlist-converter/issues"
+Homepage = "https://github.com/b1scoito/rekordbox-playlist-converter"
+Repository = "https://github.com/b1scoito/rekordbox-playlist-converter"
+Issues = "https://github.com/b1scoito/rekordbox-playlist-converter/issues"
 
 [dependency-groups]
 dev = [
