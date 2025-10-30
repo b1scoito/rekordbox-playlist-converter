@@ -1,0 +1,75 @@
+[project]
+name = "rekordbox-playlist-converter"
+version = "0.1.0"
+description = "Convert Rekordbox playlists with automatic format selection for Pioneer DJ CDJ/XDJ equipment"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+license = {text = "MIT"}
+keywords = ["rekordbox", "cdj", "xdj", "pioneer-dj", "playlist", "converter", "mp3", "flac", "music"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "rich>=14.2.0",
+    "typer>=0.20.0",
+]
+
+[project.scripts]
+rekordbox-converter = "main:app"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/rekordbox-playlist-converter"
+Repository = "https://github.com/yourusername/rekordbox-playlist-converter"
+Issues = "https://github.com/yourusername/rekordbox-playlist-converter/issues"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+    "pyright>=1.1.407",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["main"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
+
+[tool.pyright]
+typeCheckingMode = "standard"
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.11"
