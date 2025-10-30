@@ -9,21 +9,21 @@ Convert Rekordbox playlists with automatic format selection for Pioneer DJ CDJ/X
 
 ## Features
 
-- <� **Smart Format Selection**: Automatically recommends the best format (FLAC/MP3) for your specific CDJ/XDJ model
-- = **Safe**: Creates a standalone XML file - never modifies your original Rekordbox library
-- <� **High Quality**: Supports MP3 (320kbps), FLAC (lossless), and AIFF conversion via ffmpeg
-- =� **17 CDJ Models Supported**: From CDJ-900 to CDJ-3000 and XDJ-RX to OPUS-QUAD
-- ( **Modern CLI**: Beautiful interface powered by Typer and Rich
-- >� **Well Tested**: 49 unit tests with 100% type safety
+- Automatic format selection based on CDJ/XDJ model capabilities
+- Standalone XML generation without modifying original Rekordbox library
+- MP3 (320kbps), FLAC (lossless), and AIFF conversion via ffmpeg
+- Support for 17 Pioneer DJ models (CDJ-900 to CDJ-3000, XDJ-RX to OPUS-QUAD)
+- CLI interface with Typer and Rich
+- 49 unit tests with full type coverage
 
-## Why This Tool?
+## Overview
 
-Pioneer CDJs have varying format support capabilities and known issues with WAV files (WAV_EXTENSIBLE metadata problems). This tool:
+Pioneer CDJs have different format support capabilities and known compatibility issues with WAV files (WAV_EXTENSIBLE metadata). This tool addresses these issues by:
 
-- **Avoids WAV/AIFF issues** by recommending FLAC or MP3
-- **Maximizes quality** by using FLAC for supported models
-- **Ensures compatibility** by using MP3 320kbps for older models
-- **Preserves metadata** including cue points, BPM, key, and track analysis
+- Selecting FLAC for models that support it
+- Using MP3 320kbps for models with limited format support
+- Avoiding WAV/AIFF to prevent metadata compatibility problems
+- Preserving all metadata including cue points, BPM, key, and track analysis
 
 ## Installation
 
@@ -49,18 +49,20 @@ pip install -e .
 
 ### System Requirements
 
-- **Python 3.11+**
-- **ffmpeg** (for audio conversion)
-  ```bash
-  # macOS
-  brew install ffmpeg
+- Python 3.11 or higher
+- ffmpeg for audio conversion
 
-  # Ubuntu/Debian
-  sudo apt install ffmpeg
+Install ffmpeg:
+```bash
+# macOS
+brew install ffmpeg
 
-  # Windows
-  choco install ffmpeg
-  ```
+# Ubuntu/Debian
+sudo apt install ffmpeg
+
+# Windows
+choco install ffmpeg
+```
 
 ## Usage
 
@@ -107,20 +109,20 @@ rekordbox-converter convert rekordbox.xml \
   --cdj-model CDJ-3000
 
 # 3. Import the generated XML into Rekordbox
-# File � Import Collection � Select "Tech House 2024 (FLAC).xml"
+# File > Import Collection > Select "Tech House 2024 (FLAC).xml"
 ```
 
 ## Format Recommendations by Model
 
 | Model | Recommended | Max Quality | Notes |
 |-------|------------|-------------|-------|
-| **CDJ-3000** | FLAC | 96kHz/24-bit | Best quality available |
-| **CDJ-2000NXS2** | FLAC | 96kHz/24-bit | Excellent lossless support |
-| **XDJ-RX3** | FLAC | 48kHz/24-bit | Modern FLAC support |
-| **XDJ-RX2** | MP3 | 320kbps | Reliable, no WAV issues |
-| **CDJ-2000NXS** | MP3 | 320kbps | WAV/AIFF compatibility issues |
+| CDJ-3000 | FLAC | 96kHz/24-bit | Highest quality support |
+| CDJ-2000NXS2 | FLAC | 96kHz/24-bit | Full lossless support |
+| XDJ-RX3 | FLAC | 48kHz/24-bit | FLAC supported |
+| XDJ-RX2 | MP3 | 320kbps | No FLAC support |
+| CDJ-2000NXS | MP3 | 320kbps | WAV/AIFF compatibility issues |
 
-[Full model list](https://github.com/b1scoito/rekordbox-playlist-converter#supported-models)
+See full model list with `rekordbox-converter models`
 
 ## Development
 
@@ -168,31 +170,31 @@ Pre-commit hooks run automatically before each commit:
 
 ## How It Works
 
-1. **Reads** your Rekordbox XML to extract playlist information
-2. **Converts** tracks using ffmpeg to the optimal format for your CDJ
-3. **Creates** a standalone XML with:
-   - Only the converted tracks (not your entire library)
-   - Unique track IDs (starting from 1000000) to prevent conflicts
-   - All metadata preserved (cue points, BPM, key, etc.)
-4. **Safe to import** via Rekordbox: File � Import Collection
+1. Reads the Rekordbox XML file to extract playlist information
+2. Converts tracks using ffmpeg to the selected format
+3. Creates a standalone XML file containing:
+   - Only converted tracks from the specified playlist
+   - Unique track IDs starting from 1000000 to avoid conflicts
+   - All original metadata (cue points, BPM, key, track analysis)
+4. Import the generated XML into Rekordbox via File > Import Collection
 
 ## FAQ
 
 **Q: Will this modify my original Rekordbox library?**
-A: No! It creates a completely new, standalone XML file. Your original is never touched.
+A: No. The tool creates a new standalone XML file without modifying the original.
 
 **Q: Why not use WAV/AIFF?**
-A: CDJs have known issues with WAV_EXTENSIBLE metadata in WAV files. FLAC provides lossless quality without compatibility issues.
+A: CDJs have known issues with WAV_EXTENSIBLE metadata. FLAC provides lossless quality without these compatibility problems.
 
-**Q: Can I use this for USB sticks for CDJs?**
-A: Yes! After conversion, import the standalone XML into Rekordbox, then export to USB as normal.
+**Q: Can I use this for USB export?**
+A: Yes. Import the generated XML into Rekordbox, then export to USB as normal.
 
-**Q: What if my CDJ model isn't listed?**
-A: The tool will show an error with all supported models. Please open an issue to request support for your model.
+**Q: What if my CDJ model is not supported?**
+A: The tool will display an error listing all supported models. Open an issue to request additional model support.
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome. Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch
@@ -207,12 +209,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - Pioneer DJ for Rekordbox and CDJ/XDJ equipment
-- [Typer](https://typer.tiangolo.com/) for the excellent CLI framework
-- [Rich](https://rich.readthedocs.io/) for beautiful terminal output
-- The DJ community for format compatibility insights
+- [Typer](https://typer.tiangolo.com/) for CLI framework
+- [Rich](https://rich.readthedocs.io/) for terminal output
+- DJ community for format compatibility insights
 
 ## Support
 
-- = [Report bugs](https://github.com/b1scoito/rekordbox-playlist-converter/issues)
-- =� [Request features](https://github.com/b1scoito/rekordbox-playlist-converter/issues)
-- =� [Read the docs](https://github.com/b1scoito/rekordbox-playlist-converter)
+- [Report bugs](https://github.com/b1scoito/rekordbox-playlist-converter/issues)
+- [Request features](https://github.com/b1scoito/rekordbox-playlist-converter/issues)
