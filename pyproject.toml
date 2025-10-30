@@ -7,13 +7,13 @@ requires-python = ">=3.11"
 authors = [
     {name = "biscoito", email = "eu@biscoito.eu"}
 ]
-license = {text = "GNU GPLv3"}
+license = {text = "GPL-3.0-or-later"}
 keywords = ["rekordbox", "cdj", "xdj", "pioneer-dj", "playlist", "converter", "mp3", "flac", "music"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "Topic :: Multimedia :: Sound/Audio :: Conversion",
-    "License :: OSI Approved :: GNU GPLv3 License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
