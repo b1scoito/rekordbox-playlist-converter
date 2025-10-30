@@ -204,7 +204,7 @@ Contributions are welcome. Please follow these steps:
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+GNU GPLv3 License - see [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
