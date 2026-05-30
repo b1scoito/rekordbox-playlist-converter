@@ -12,6 +12,13 @@ from typing import Any
 # format. `notes` is optional, free-form, surfaced by the `models` CLI.
 CDJ_MODELS: dict[str, dict[str, Any]] = {
     # High-end models with full FLAC/ALAC support (96kHz/24-bit)
+    "CDJ-3000X": {
+        "year": 2025,
+        "formats": ["flac", "alac", "aiff", "wav", "aac", "mp3"],
+        "max_quality": {"flac": "96kHz/24-bit", "aac": "48kHz/16-bit"},
+        "recommended": "flac",
+        "notes": "AlphaTheta-branded successor to CDJ-3000; adds Wi-Fi/streaming/NFC",
+    },
     "CDJ-3000": {
         "year": 2020,
         "formats": ["flac", "alac", "aiff", "wav", "aac", "mp3"],
@@ -37,6 +44,13 @@ CDJ_MODELS: dict[str, dict[str, Any]] = {
         "recommended": "flac",
     },
     # Mid-range models with limited FLAC support (48kHz/24-bit)
+    "XDJ-AZ": {
+        "year": 2024,
+        "formats": ["flac", "alac", "aiff", "wav", "aac", "mp3"],
+        "max_quality": {"flac": "48kHz/24-bit", "aac": "48kHz/16-bit"},
+        "recommended": "flac",
+        "notes": "AlphaTheta 4-channel flagship all-in-one; FLAC requires firmware 1.10+",
+    },
     "XDJ-1000MK2": {
         "year": 2016,
         "formats": ["flac", "alac", "aiff", "wav", "aac", "mp3"],

@@ -1,6 +1,6 @@
 # Rekordbox Playlist Converter
 
-Convert Rekordbox playlists with automatic format selection for Pioneer DJ CDJ/XDJ equipment.
+Convert Rekordbox playlists with automatic format selection for Pioneer DJ / AlphaTheta CDJ/XDJ equipment.
 
 [![CI](https://github.com/b1scoito/rekordbox-playlist-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/b1scoito/rekordbox-playlist-converter/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -10,11 +10,14 @@ Convert Rekordbox playlists with automatic format selection for Pioneer DJ CDJ/X
 ## Features
 
 - Automatic format selection based on CDJ/XDJ model capabilities
+- Source-quality preservation: never upsamples, caps to deck + codec ceiling
+- Atomic writes, cover-art passthrough, same-format `-c:a copy` when possible
+- `--dry-run` plan preview, `--jobs` parallel ffmpeg, JSON manifest output
 - Standalone XML generation without modifying original Rekordbox library
 - MP3 (320kbps), FLAC (lossless), and AIFF conversion via ffmpeg
-- Support for 17 Pioneer DJ models (CDJ-900 to CDJ-3000, XDJ-RX to OPUS-QUAD)
+- Support for 19 Pioneer DJ / AlphaTheta models (CDJ-900 to CDJ-3000X, XDJ-RX to XDJ-AZ)
 - CLI interface with Typer and Rich
-- 49 unit tests with full type coverage
+- 91 unit tests with full type coverage
 
 ## Overview
 
@@ -116,7 +119,9 @@ rekordbox-converter convert rekordbox.xml \
 
 | Model | Recommended | Max Quality | Notes |
 |-------|------------|-------------|-------|
+| CDJ-3000X | FLAC | 96kHz/24-bit | AlphaTheta successor (2025), Wi-Fi/streaming/NFC |
 | CDJ-3000 | FLAC | 96kHz/24-bit | Highest quality support |
+| XDJ-AZ | FLAC | 48kHz/24-bit | AlphaTheta 4-channel flagship (2024) |
 | CDJ-2000NXS2 | FLAC | 96kHz/24-bit | Full lossless support |
 | XDJ-RX3 | FLAC | 48kHz/24-bit | FLAC supported |
 | XDJ-RX2 | MP3 | 320kbps | No FLAC support |
@@ -143,7 +148,7 @@ uv run pre-commit install
 uv run pytest tests/ -v
 
 # Run with coverage
-uv run pytest tests/ --cov=main --cov-report=term-missing
+uv run pytest tests/ --cov=. --cov-report=term-missing
 
 # Run specific test
 uv run pytest tests/test_cdj_detection.py -v
@@ -153,11 +158,11 @@ uv run pytest tests/test_cdj_detection.py -v
 
 ```bash
 # Lint and format
-uv run ruff check main.py tests/
-uv run ruff format main.py tests/
+uv run ruff check .
+uv run ruff format .
 
 # Type check
-uv run pyright main.py tests/
+uv run pyright .
 ```
 
 ### Pre-commit Hooks
@@ -208,7 +213,7 @@ GNU General Public License v3.0 - see [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Pioneer DJ for Rekordbox and CDJ/XDJ equipment
+- Pioneer DJ / AlphaTheta for Rekordbox and CDJ/XDJ equipment
 - [Typer](https://typer.tiangolo.com/) for CLI framework
 - [Rich](https://rich.readthedocs.io/) for terminal output
 - DJ community for format compatibility insights

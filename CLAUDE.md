@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Rekordbox playlist converter that converts tracks from Rekordbox playlists to various formats (MP3, FLAC, AIFF) optimized for Pioneer DJ CDJ/XDJ equipment. The tool creates a **standalone, importable XML file** that doesn't modify the user's original Rekordbox database.
+This is a Rekordbox playlist converter that converts tracks from Rekordbox playlists to various formats (MP3, FLAC, AIFF) optimized for Pioneer DJ / AlphaTheta CDJ/XDJ equipment (Pioneer DJ rebranded to AlphaTheta in 2024 — newer models like CDJ-3000X and XDJ-AZ ship under the AlphaTheta name). The tool creates a **standalone, importable XML file** that doesn't modify the user's original Rekordbox database.
 
 ## Core Architecture
 

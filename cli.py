@@ -28,7 +28,7 @@ app = typer.Typer(
 
 def render_cdj_models_table() -> None:
     """Print all supported CDJ/XDJ models with their format capabilities."""
-    console.print("\n[bold cyan]Supported Pioneer DJ CDJ/XDJ Models[/bold cyan]\n")
+    console.print("\n[bold cyan]Supported Pioneer DJ / AlphaTheta CDJ/XDJ Models[/bold cyan]\n")
 
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Model", style="cyan", width=15)
