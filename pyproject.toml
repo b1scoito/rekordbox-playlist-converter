@@ -1,6 +1,6 @@
 [project]
 name = "rekordbox-playlist-converter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Convert Rekordbox playlists with automatic format selection for Pioneer DJ / AlphaTheta CDJ/XDJ equipment"
 readme = "README.md"
 requires-python = ">=3.11"
