@@ -206,7 +206,7 @@ class TestCommandStructure:
 
 
 class TestMp3SpecificFlags:
-    """MP3 always uses libmp3lame at 320k (we never produce VBR or other rates)."""
+    """MP3 always uses libmp3lame at strict CBR 320k. We don't ship VBR/ABR."""
 
     def test_codec_is_libmp3lame(self):
         cmd = _cmd("mp3", source_sr=44100, target_sr=44100)
@@ -215,6 +215,41 @@ class TestMp3SpecificFlags:
     def test_bitrate_is_320k(self):
         cmd = _cmd("mp3", source_sr=44100, target_sr=44100)
         assert _arg(cmd, "-b:a") == "320k"
+
+    def test_strict_cbr_flags_present(self):
+        # Without these three flags pinned to the target, ffmpeg's libmp3lame
+        # underspends via the bit reservoir and tags the file VBR -- we saw
+        # 270 kb/s actual on a 320k target. minrate == maxrate == bufsize ==
+        # bitrate forces every frame full-size: real CBR 320 kbps.
+        cmd = _cmd("mp3", source_sr=44100, target_sr=44100)
+        assert _arg(cmd, "-minrate") == "320k"
+        assert _arg(cmd, "-maxrate") == "320k"
+        assert _arg(cmd, "-bufsize") == "320k"
+
+    def test_strict_cbr_flags_omitted_for_passthrough(self):
+        # Passthrough = stream copy, no re-encode. Rate-control flags would
+        # be meaningless and might even confuse ffmpeg's mux.
+        cmd = _cmd("mp3", source_sr=44100, target_sr=44100, passthrough=True)
+        assert "-minrate" not in cmd
+        assert "-maxrate" not in cmd
+        assert "-bufsize" not in cmd
+
+
+class TestLosslessFormatsHaveNoRateControl:
+    """FLAC and AIFF are lossless: minrate/maxrate would be a category error.
+    Only MP3 (a lossy bitrate-targeted codec) gets the CBR enforcement flags."""
+
+    def test_flac_has_no_minrate_maxrate(self):
+        cmd = _cmd("flac", source_sr=44100, source_bd=16, target_sr=44100, target_bd=16)
+        assert "-minrate" not in cmd
+        assert "-maxrate" not in cmd
+        assert "-bufsize" not in cmd
+
+    def test_aiff_has_no_minrate_maxrate(self):
+        cmd = _cmd("aiff", source_sr=44100, source_bd=16, target_sr=44100, target_bd=16)
+        assert "-minrate" not in cmd
+        assert "-maxrate" not in cmd
+        assert "-bufsize" not in cmd
 
 
 @pytest.mark.parametrize(
