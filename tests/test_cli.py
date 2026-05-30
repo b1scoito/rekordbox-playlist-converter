@@ -5,6 +5,7 @@ don't exercise the ffmpeg pipeline here -- the convert tests use --dry-run
 so they probe-and-plan without writing files (or invoking ffmpeg).
 """
 
+import re
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
@@ -13,6 +14,17 @@ import pytest
 from typer.testing import CliRunner
 
 from cli import app
+
+# Rich's help formatter interleaves ANSI color codes inside flag names
+# (e.g. `\x1b[1;36m-\x1b[0m\x1b[1;36m-dry-run\x1b[0m`), so a literal
+# substring search for "--dry-run" fails in CI even though the flag is
+# present. Strip ANSI before asserting on rendered output.
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _plain(text: str) -> str:
+    return _ANSI_ESCAPE.sub("", text)
+
 
 runner = CliRunner()
 
@@ -69,7 +81,7 @@ class TestListCommand:
     def test_list_shows_playlists(self, xml_path):
         result = runner.invoke(app, ["list", str(xml_path)])
         assert result.exit_code == 0
-        assert "Demo Playlist" in result.stdout
+        assert "Demo Playlist" in _plain(result.stdout)
 
 
 class TestConvertValidation:
@@ -94,7 +106,7 @@ class TestConvertValidation:
             ],
         )
         assert result.exit_code == 1
-        assert "Unknown CDJ model" in result.stdout
+        assert "Unknown CDJ model" in _plain(result.stdout)
 
     def test_invalid_format_errors(self, xml_path, tmp_path):
         result = runner.invoke(
@@ -111,7 +123,7 @@ class TestConvertValidation:
             ],
         )
         assert result.exit_code == 1
-        assert "Invalid format" in result.stdout
+        assert "Invalid format" in _plain(result.stdout)
 
     def test_missing_xml_file_errors(self, tmp_path):
         result = runner.invoke(
@@ -150,7 +162,7 @@ class TestConvertDryRun:
             ],
         )
         assert result.exit_code == 0
-        assert "DRY RUN" in result.stdout
+        assert "DRY RUN" in _plain(result.stdout)
 
     def test_dry_run_does_not_create_output_directory(self, xml_path, tmp_path):
         out = tmp_path / "should_not_exist"
@@ -179,7 +191,8 @@ class TestHelp:
         # If someone removes one of these by accident, the help test catches it.
         result = runner.invoke(app, ["convert", "--help"])
         assert result.exit_code == 0
-        assert "--dry-run" in result.stdout
-        assert "--jobs" in result.stdout
-        assert "--manifest" in result.stdout
-        assert "--cdj-model" in result.stdout
+        stdout = _plain(result.stdout)
+        assert "--dry-run" in stdout
+        assert "--jobs" in stdout
+        assert "--manifest" in stdout
+        assert "--cdj-model" in stdout
