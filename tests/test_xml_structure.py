@@ -222,6 +222,20 @@ class TestTrackElementCreation:
         new_track = self.converter._create_track_element(original, None, result)
         assert new_track.get("Size") == "8000000"
 
+    def test_relative_output_path_is_resolved_to_absolute(self):
+        # Regression: relative output paths used to produce malformed
+        # `file://localhost<rel>` URIs (e.g. `file://localhostout/a.mp3`),
+        # which Rekordbox 7 silently refuses to import. _create_track_element
+        # resolves the path before forming the Location so the URI is always
+        # absolute and parseable regardless of how the caller built it.
+        original = ET.Element("TRACK", Name="Test")
+        result = _result(OutputFormat.MP3, Path("relative/sub/track.mp3"))
+        new_track = self.converter._create_track_element(original, None, result)
+        location = new_track.get("Location") or ""
+        assert location.startswith("file://localhost/")
+        # And the resolved suffix preserves the relative tail intact.
+        assert location.endswith("/relative/sub/track.mp3")
+
 
 class TestSaveStandaloneXML:
     """Persistence: writing the standalone XML to disk."""
