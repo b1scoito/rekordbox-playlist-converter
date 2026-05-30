@@ -1,3 +1,10 @@
+# Explicit build backend. setuptools 77+ supports the PEP 639 SPDX
+# license expression; older versions emit deprecation warnings (and
+# eventually break after 2027-Feb-18 per setuptools' announcement).
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "rekordbox-playlist-converter"
 version = "0.2.0"
@@ -7,13 +14,14 @@ requires-python = ">=3.11"
 authors = [
     {name = "biscoito", email = "eu@biscoito.eu"}
 ]
-license = {text = "GPL-3.0-or-later"}
+license = "GPL-3.0-or-later"
 keywords = ["rekordbox", "cdj", "xdj", "pioneer-dj", "playlist", "converter", "mp3", "flac", "music"]
+# Note: the deprecated `License :: OSI Approved :: ...` classifier is
+# omitted; the SPDX expression in `license` above is canonical now.
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "Topic :: Multimedia :: Sound/Audio :: Conversion",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -28,6 +36,13 @@ dependencies = [
 # Entry point lives in cli.py; main.py remains as a thin shim so the dev
 # workflow `python main.py ...` continues to work as documented.
 rekordbox-converter = "cli:app"
+
+[tool.setuptools]
+# Flat layout: each top-level .py is its own module. setuptools' auto-
+# discovery refuses to guess when there's more than one, so we list
+# them explicitly. Tests are excluded by not being in this list (the
+# tests/ directory has no __init__.py and isn't a package anyway).
+py-modules = ["_console", "models", "quality", "converter", "cli", "main"]
 
 [project.urls]
 Homepage = "https://github.com/b1scoito/rekordbox-playlist-converter"
