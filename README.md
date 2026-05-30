@@ -197,6 +197,12 @@ A: Yes. Import the generated XML into Rekordbox, then export to USB as normal.
 **Q: What if my CDJ model is not supported?**
 A: The tool will display an error listing all supported models. Open an issue to request additional model support.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for candidate features under consideration —
+notably a direct Rekordbox library write mode that would skip the manual
+import step entirely.
+
 ## Contributing
 
 Contributions are welcome. Please follow these steps:
