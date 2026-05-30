@@ -492,7 +492,14 @@ class RekordboxPlaylistConverter:
         new_track = ET.Element("TRACK", attrib=dict(original_track.attrib))
         if new_track_id:
             new_track.set("TrackID", new_track_id)
-        new_track.set("Location", f"file://localhost{result.output_path.as_posix()}")
+        # file://localhost<path> requires an absolute path; a relative one
+        # silently fails to import in Rekordbox 7. .resolve() is idempotent
+        # for already-absolute paths, so this is cheap insurance even though
+        # convert_playlist also resolves output_dir up front.
+        new_track.set(
+            "Location",
+            f"file://localhost{result.output_path.resolve().as_posix()}",
+        )
 
         match self.output_format:
             case OutputFormat.MP3:
@@ -545,7 +552,12 @@ class RekordboxPlaylistConverter:
         and writes no files. `jobs` controls ffmpeg parallelism (default:
         cpu_count).
         """
-        output_path = Path(output_dir)
+        # Resolve to absolute before anything else: the standalone XML
+        # writes file://localhost<output_path> URIs, which Rekordbox only
+        # honours if they're absolute. A relative `-o out` would otherwise
+        # produce `file://localhostout/Track.mp3` -- malformed, no track
+        # imports. .resolve() also normalises symlinks and `..` segments.
+        output_path = Path(output_dir).resolve()
         if not dry_run:
             output_path.mkdir(parents=True, exist_ok=True)
 
