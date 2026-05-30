@@ -30,7 +30,7 @@ Pioneer CDJs have different format support capabilities and known compatibility 
 
 ## Installation
 
-### From PyPI (Coming Soon)
+### From PyPI
 
 ```bash
 pip install rekordbox-playlist-converter
