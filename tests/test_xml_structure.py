@@ -21,6 +21,7 @@ def _result(
     sample_rate: int | None = None,
     bit_depth: int | None = None,
     size_bytes: int | None = None,
+    audio_start_seconds: float = 0.0,
 ) -> ConversionResult:
     """Convenience: build a minimal ConversionResult for XML-building tests."""
     return ConversionResult(
@@ -32,6 +33,7 @@ def _result(
         target_bit_depth=bit_depth,
         output_bitrate_kbps=bitrate_kbps,
         output_size_bytes=size_bytes,
+        audio_start_seconds=audio_start_seconds,
     )
 
 
@@ -235,6 +237,107 @@ class TestTrackElementCreation:
         assert location.startswith("file://localhost/")
         # And the resolved suffix preserves the relative tail intact.
         assert location.endswith("/relative/sub/track.mp3")
+
+
+class TestBeatgridShift:
+    """When the encoded output reports a non-zero `start_time` (libmp3lame
+    encoder delay), TEMPO and POSITION_MARK timestamps are shifted forward
+    by that amount so Rekordbox's file-time waveform display aligns with the
+    grid. Lossless targets (start_time=0) are a no-op."""
+
+    def setup_method(self):
+        self.converter = RekordboxPlaylistConverter("dummy.xml", "mp3")
+
+    def _track_with_grid(self) -> ET.Element:
+        track = ET.Element("TRACK", Name="Test")
+        ET.SubElement(track, "TEMPO", Inizio="0.000", Bpm="128.00", Metro="4/4", Battito="1")
+        ET.SubElement(track, "TEMPO", Inizio="1.875", Bpm="128.00", Metro="4/4", Battito="1")
+        ET.SubElement(track, "POSITION_MARK", Name="cue", Start="2.500", Num="0")
+        ET.SubElement(track, "POSITION_MARK", Name="loop", Start="10.000", End="14.000", Num="1")
+        return track
+
+    def test_zero_delay_does_not_shift_grid(self):
+        # FLAC / AIFF targets: encoder delay is 0, timestamps must be byte-identical.
+        original = self._track_with_grid()
+        result = _result(OutputFormat.FLAC, Path("/out/a.flac"), audio_start_seconds=0.0)
+        new_track = self.converter._create_track_element(original, None, result)
+
+        tempos = new_track.findall("TEMPO")
+        marks = new_track.findall("POSITION_MARK")
+        assert tempos[0].get("Inizio") == "0.000"
+        assert tempos[1].get("Inizio") == "1.875"
+        assert marks[0].get("Start") == "2.500"
+        assert marks[1].get("Start") == "10.000"
+        assert marks[1].get("End") == "14.000"
+
+    def test_mp3_delay_shifts_tempo_and_marks(self):
+        # 1152-sample libmp3lame delay at 44.1 kHz = 0.026122 s.
+        original = self._track_with_grid()
+        delay = 0.026
+        result = _result(OutputFormat.MP3, Path("/out/a.mp3"), audio_start_seconds=delay)
+        new_track = self.converter._create_track_element(original, None, result)
+
+        tempos = new_track.findall("TEMPO")
+        marks = new_track.findall("POSITION_MARK")
+        # Every time-bearing attribute shifts forward by exactly `delay`.
+        assert tempos[0].get("Inizio") == "0.026"
+        assert tempos[1].get("Inizio") == "1.901"
+        assert marks[0].get("Start") == "2.526"
+        # POSITION_MARK with loop: both Start AND End shift, keeping length invariant.
+        assert marks[1].get("Start") == "10.026"
+        assert marks[1].get("End") == "14.026"
+
+    def test_shift_preserves_non_time_attributes(self):
+        # Bpm, Metro, Battito on TEMPO and Name/Num on POSITION_MARK survive intact.
+        original = self._track_with_grid()
+        result = _result(OutputFormat.MP3, Path("/out/a.mp3"), audio_start_seconds=0.026)
+        new_track = self.converter._create_track_element(original, None, result)
+
+        tempo = new_track.findall("TEMPO")[0]
+        assert tempo.get("Bpm") == "128.00"
+        assert tempo.get("Metro") == "4/4"
+        assert tempo.get("Battito") == "1"
+
+        mark = new_track.findall("POSITION_MARK")[0]
+        assert mark.get("Name") == "cue"
+        assert mark.get("Num") == "0"
+
+    def test_shift_does_not_mutate_source_track(self):
+        # The grid shift must work on a deep copy; otherwise re-using the same
+        # source TRACK for a second conversion (different format, different
+        # delay) would compound the shift on the same elements.
+        original = self._track_with_grid()
+        result = _result(OutputFormat.MP3, Path("/out/a.mp3"), audio_start_seconds=0.026)
+        _ = self.converter._create_track_element(original, None, result)
+
+        # Source tree still reads the original values.
+        assert original.findall("TEMPO")[0].get("Inizio") == "0.000"
+        assert original.findall("TEMPO")[1].get("Inizio") == "1.875"
+        assert original.findall("POSITION_MARK")[0].get("Start") == "2.500"
+        assert original.findall("POSITION_MARK")[1].get("Start") == "10.000"
+        assert original.findall("POSITION_MARK")[1].get("End") == "14.000"
+
+    def test_unrelated_children_pass_through_unchanged(self):
+        # Only TEMPO / POSITION_MARK get shifted; other rekordbox child tags
+        # (TRACK is the only one in practice today, but be defensive) are copied
+        # as-is so we don't accidentally rewrite future schema additions.
+        original = ET.Element("TRACK", Name="Test")
+        ET.SubElement(original, "CUSTOM_THING", When="5.000", Value="foo")
+        ET.SubElement(original, "TEMPO", Inizio="1.000", Bpm="120.00")
+
+        result = _result(OutputFormat.MP3, Path("/out/a.mp3"), audio_start_seconds=0.05)
+        new_track = self.converter._create_track_element(original, None, result)
+
+        custom_copy = new_track.find("CUSTOM_THING")
+        tempo_copy = new_track.find("TEMPO")
+        assert custom_copy is not None and tempo_copy is not None
+        # CUSTOM_THING.When is NOT a known time attribute -> not shifted.
+        assert custom_copy.get("When") == "5.000"
+        assert custom_copy.get("Value") == "foo"
+        # TEMPO is shifted as expected.
+        assert tempo_copy.get("Inizio") == "1.050"
+        # Sanity: deepcopy didn't drop the unrelated tag.
+        assert len(new_track.findall("CUSTOM_THING")) == 1
 
 
 class TestSaveStandaloneXML:

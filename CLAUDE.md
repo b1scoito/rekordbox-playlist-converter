@@ -42,18 +42,21 @@ The codebase is split into small, single-purpose modules. Each leans on the next
 
 8. **Output paths are absolute**: `convert_playlist` resolves `output_dir` to an absolute path before anything else, and `_create_track_element` resolves again defensively. Rekordbox 7 silently refuses to import `file://localhost<rel>` URIs; the resolve calls are load-bearing for the import flow. Do not remove them.
 
-## Beatgrid alignment caveats
+## Beatgrid alignment
 
-`_create_track_element` copies `TEMPO` (beatgrid) and `POSITION_MARK` (cues) verbatim from the source XML — it never rewrites grid timestamps. That's correct for sample-exact conversions, but two paths can introduce timing drift the XML won't reflect:
+`_create_track_element` deep-copies every `TEMPO` (beatgrid) and `POSITION_MARK` (cue / loop) child from the source TRACK, and, if the encoded output has a non-zero audio start time, shifts every time-bearing attribute forward by that amount. Lossless targets report `audio_start_seconds=0` and the copy is byte-identical to the source.
 
-- **MP3 source → FLAC/AIFF target**: the MP3 decoder strips ~13–26 ms of encoder delay; the converted PCM is shifted earlier than the original timeline the `TEMPO Inizio` values were computed against. Result: beatgrid drifts forward by the encoder delay.
-- **FLAC source → MP3 target on older CDJs**: `libmp3lame` writes a LAME header so modern CDJs (CDJ-3000, XDJ-RX2/3, XDJ-XZ) play gapless. Older firmware (CDJ-900, some CDJ-2000) may ignore the header, producing the same ~13–26 ms shift on the deck.
+**The bug this corrects.** ffmpeg's libmp3lame advances the audio stream's PTS by the encoder delay (~1152 samples / ~25 ms at 44.1 kHz / ~24 ms at 48 kHz) but leaves the LAME info-tag delay subfield empty (`initial_padding=0` in ffprobe output). Rekordbox reads file time, not LAME-aware audio time, so without correction the grid appears 25–50 ms ahead of the audible beat in Rekordbox's waveform view — and on any CDJ that doesn't honour the LAME header (older CDJ-900 / CDJ-2000 firmware).
 
-Mitigations the code already takes:
-- Same-format passthrough (`-c:a copy`) when source and target codec/quality match. Zero drift on MP3→MP3 and FLAC→FLAC paths.
-- AIFF as a fallback for old decks that won't honour LAME's gapless header.
+**How it's implemented.** `quality.probe_audio_start_seconds(path)` runs `ffprobe -show_entries stream=start_time` against the encoded file. The result lands on `ConversionResult.audio_start_seconds` via `_result_from_encoded_output`. `_create_track_element._shift_grid_attrs(...)` then rewrites `TEMPO.Inizio` and `POSITION_MARK.Start` / `.End` at 3-decimal precision (the rekordbox convention).
 
-If a future change starts rewriting the grid (e.g. to correct the MP3→lossless drift), it must do so against the *converted* audio's timeline, not the source's, and it must be opt-in — the project's contract with users is "your cues come out untouched."
+**Invariants worth defending.**
+- The source XML tree is never mutated. The deep-copy in `_create_track_element` is what makes that true; don't refactor it away into a shallow `for child in original: new.append(child)` loop.
+- The shift only touches `TEMPO.Inizio`, `POSITION_MARK.Start`, and `POSITION_MARK.End`. Other rekordbox child tags and non-time attributes pass through verbatim.
+- Same-format passthrough (`-c:a copy`) still preserves the source's existing delay (the bytes don't change), so the shift compensates correctly there too.
+- If the probe fails for any reason (ffprobe missing, weird file, etc.) the result is `0.0` — no shift, current behaviour preserved.
+
+**Test coverage**: `TestBeatgridShift` in `tests/test_xml_structure.py` (zero delay no-op, MP3 delay shifts TEMPO + POSITION_MARK Start + End, non-time attributes preserved, source tree unmutated, unknown child tags pass through). `TestProbeAudioStartSeconds` in `tests/test_probe.py` covers parsing and every failure mode.
 
 ## Development Commands
 

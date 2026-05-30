@@ -9,7 +9,9 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from quality import probe
+import pytest
+
+from quality import probe, probe_audio_start_seconds
 
 
 def _stdout(text: str) -> MagicMock:
@@ -96,3 +98,51 @@ class TestProbeFailures:
     def test_oserror_returns_all_none(self, _mock_run):
         result = probe(Path("/x.flac"))
         assert result == (None, None, None, None, None)
+
+
+class TestProbeAudioStartSeconds:
+    """`probe_audio_start_seconds` surfaces libmp3lame's encoder delay so the
+    converter can shift the rekordbox grid to match. Returns 0.0 for every
+    failure mode (no delay assumed) so callers don't have to handle None."""
+
+    @patch("quality.subprocess.run")
+    def test_parses_libmp3lame_encoder_delay(self, mock_run):
+        # The exact value the user reported on their FLAC->MP3 output:
+        # ~1152-sample libmp3lame delay at 44.1 kHz.
+        mock_run.return_value = MagicMock(stdout="0.025057\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.mp3")) == pytest.approx(0.025057)
+
+    @patch("quality.subprocess.run")
+    def test_lossless_format_reports_zero(self, mock_run):
+        mock_run.return_value = MagicMock(stdout="0.000000\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.flac")) == 0.0
+
+    @patch("quality.subprocess.run")
+    def test_na_value_returns_zero(self, mock_run):
+        mock_run.return_value = MagicMock(stdout="N/A\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0
+
+    @patch("quality.subprocess.run")
+    def test_empty_output_returns_zero(self, mock_run):
+        mock_run.return_value = MagicMock(stdout="\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0
+
+    @patch("quality.subprocess.run")
+    def test_unparseable_output_returns_zero(self, mock_run):
+        # ffprobe returning garbage shouldn't blow up the conversion.
+        mock_run.return_value = MagicMock(stdout="not-a-float\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0
+
+    @patch("quality.subprocess.run")
+    def test_negative_value_clamped_to_zero(self, mock_run):
+        # Defensive: a negative PTS shouldn't shift the grid backwards.
+        mock_run.return_value = MagicMock(stdout="-0.5\n", returncode=0)
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0
+
+    @patch("quality.subprocess.run", side_effect=FileNotFoundError())
+    def test_ffprobe_missing_returns_zero(self, _mock_run):
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0
+
+    @patch("quality.subprocess.run", side_effect=subprocess.TimeoutExpired("ffprobe", 30))
+    def test_timeout_returns_zero(self, _mock_run):
+        assert probe_audio_start_seconds(Path("/x.mp3")) == 0.0

@@ -105,6 +105,44 @@ def probe(
     return (sample_rate, bit_depth, codec_name, bitrate_bps, duration)
 
 
+def probe_audio_start_seconds(path: Path) -> float:
+    """Return the audio stream's presentation start time, in seconds.
+
+    For an MP3 encoded by ffmpeg's libmp3lame, this surfaces the encoder
+    delay (~1152 samples / ~25 ms at 44.1 kHz) even though ffmpeg does
+    not fill the LAME info-tag delay subfield. Lossless formats report 0.
+    Returns 0.0 on any probe failure rather than raising -- callers treat
+    "unknown" the same as "no delay" (don't shift the grid).
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=start_time",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=FFPROBE_TIMEOUT_SECONDS,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return 0.0
+    text = result.stdout.strip()
+    if not text or text == "N/A":
+        return 0.0
+    try:
+        return max(0.0, float(text))
+    except ValueError:
+        return 0.0
+
+
 def plan_conversion(
     output_format: str,
     source_sr: int | None,
