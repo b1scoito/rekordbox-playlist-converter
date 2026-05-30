@@ -48,7 +48,7 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [tool.coverage.run]
-source = ["main"]
+source = ["_console", "models", "quality", "converter", "cli", "main"]
 omit = ["tests/*"]
 
 [tool.coverage.report]
