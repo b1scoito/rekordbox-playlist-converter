@@ -19,8 +19,21 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.2
     hooks:
-      # Run the linter
+      # Run the linter (auto-fix safe issues)
       - id: ruff
         args: [--fix]
       # Run the formatter
       - id: ruff-format
+
+  # Pyright as a local hook so it shares the project's uv-managed venv and
+  # honours pyproject.toml's [tool.pyright] config. Without this, type
+  # errors only surface in CI -- and CI itself was broken until recently.
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run pyright
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true

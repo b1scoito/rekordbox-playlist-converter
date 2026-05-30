@@ -1,17 +1,19 @@
 name: CI
 
+# Triggers on the branches this repo actually uses. The previous config
+# targeted master/main only, so PRs to dev produced no CI runs.
 on:
   push:
-    branches: [master, main]
+    branches: [dev, main]
   pull_request:
-    branches: [master, main]
+    branches: [dev, main]
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -25,27 +27,28 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: |
-          uv sync --all-extras
+        run: uv sync --all-extras
 
+      # Scope every check at `.` so the modular split (quality.py, models.py,
+      # converter.py, cli.py, _console.py, main.py) is actually checked. The
+      # prior commands targeted only `main.py tests/` and silently skipped
+      # everything else after the file got split.
       - name: Run ruff linter
-        run: |
-          uv run ruff check main.py tests/
+        run: uv run ruff check .
 
       - name: Run ruff formatter
-        run: |
-          uv run ruff format --check main.py tests/
+        run: uv run ruff format --check .
 
       - name: Run pyright type checker
-        run: |
-          uv run pyright main.py tests/
+        run: uv run pyright .
 
       - name: Run tests with coverage
-        run: |
-          uv run pytest tests/ -v --cov=main --cov-report=xml --cov-report=term-missing
+        # Coverage sources come from pyproject [tool.coverage.run]; we just
+        # ask pytest-cov to honour them and emit XML for Codecov.
+        run: uv run pytest tests/ --cov --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           fail_ci_if_error: false
