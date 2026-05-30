@@ -390,6 +390,19 @@ class RekordboxPlaylistConverter:
                 cmd.extend(["-compression_level", self.format_settings.compression_level or "5"])
             case OutputFormat.MP3:
                 cmd.extend(["-acodec", self.format_settings.codec])
+                # Force strict CBR. ffmpeg's libmp3lame defaults to an ABR-ish
+                # mode even with `-b:a 320k` alone: it underspends on simple
+                # frames via the bit reservoir and tags the file VBR, so the
+                # actual average lands well below the target (we saw 270 kb/s
+                # on a 320k target in the wild). Pinning minrate == maxrate ==
+                # target makes every frame full-size; bufsize prevents
+                # rate-control from looking ahead and choosing smaller frames.
+                # Result is real CBR 320 kbps, which is the DJ-friendly default
+                # we advertise and what older CDJs (CDJ-900, some CDJ-2000)
+                # seek most reliably on.
+                if self.format_settings.bitrate:
+                    rate = self.format_settings.bitrate
+                    cmd.extend(["-minrate", rate, "-maxrate", rate, "-bufsize", rate])
             case _:  # pragma: no cover - exhaustive
                 assert_never(self.output_format)
 
