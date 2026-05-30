@@ -3,6 +3,21 @@
 Honest forward look. Items here are candidates, not commitments — nothing is
 scheduled for a specific version until it ships.
 
+## Recently shipped
+
+- **v0.3.0 — automatic beatgrid alignment for MP3 outputs.**
+  ffmpeg's libmp3lame advances the PTS by the encoder delay (~25 ms at
+  44.1 kHz) but leaves the LAME info-tag delay subfield empty. Rekordbox
+  can't compensate, so the grid visibly drifted ahead of the audio for
+  FLAC → MP3 conversions. The converter now probes the encoded output's
+  `start_time` and shifts every `TEMPO.Inizio` and `POSITION_MARK.Start/End`
+  by that amount. Zero-op for FLAC/AIFF (lossless = no encoder delay) and
+  for MP3 → MP3 passthrough (byte-identical to source).
+- **v0.2.2 — Location URIs are absolute.** Fixed a relative-`-o` bug that
+  produced unimportable XML; details in commit history.
+- **v0.2.1 — explicit `[tool.setuptools] py-modules`** so the multi-module
+  layout actually packages.
+
 ## Candidate: direct Rekordbox library writes (`--write-library`)
 
 **Goal.** Skip the manual "export XML → run converter → re-enable rekordbox xml

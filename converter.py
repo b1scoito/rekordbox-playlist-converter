@@ -11,6 +11,7 @@ progress reporting via the shared console (`_console.py`).
 # subscriptable at runtime in the stdlib.
 from __future__ import annotations
 
+import copy
 import json
 import os
 import xml.etree.ElementTree as ET
@@ -39,6 +40,7 @@ from quality import (
     parse_max_quality,
     plan_conversion,
     probe,
+    probe_audio_start_seconds,
 )
 
 # ffmpeg wall-clock ceiling. Long 96k/24 sources can take a couple of minutes;
@@ -113,6 +115,12 @@ class ConversionResult:
     output_bitrate_kbps: int | None = None
     output_size_bytes: int | None = None
     duration_seconds: float | None = None
+    # Encoder delay observed on the encoded file (libmp3lame leaves the LAME
+    # info-tag delay field empty but advances the PTS). Used to shift TEMPO
+    # and POSITION_MARK timestamps so the grid aligns with the audible beat
+    # in Rekordbox -- which reads file time, not LAME-aware audio time.
+    # Zero for lossless targets (no padding).
+    audio_start_seconds: float = 0.0
 
 
 class RekordboxPlaylistConverter:
@@ -423,6 +431,11 @@ class RekordboxPlaylistConverter:
             size_bytes: int | None = planned_result.output_path.stat().st_size
         except OSError:
             size_bytes = None
+        # libmp3lame writes the encoder delay (~25 ms at 44.1 kHz) into the
+        # PTS but leaves the LAME info-tag's delay subfield empty, so
+        # Rekordbox can't honour gapless playback. We read the PTS back so
+        # _create_track_element can shift the grid to compensate.
+        audio_start = probe_audio_start_seconds(planned_result.output_path)
         return ConversionResult(
             source_path=planned_result.source_path,
             output_path=planned_result.output_path,
@@ -439,6 +452,7 @@ class RekordboxPlaylistConverter:
             duration_seconds=(
                 out_duration if out_duration is not None else planned_result.duration_seconds
             ),
+            audio_start_seconds=audio_start,
         )
 
     def convert_track(
@@ -523,9 +537,47 @@ class RekordboxPlaylistConverter:
             new_track.set("Size", str(result.output_size_bytes))
 
         # Preserve TEMPO / POSITION_MARK / any other child elements.
+        # deepcopy because ET.Element children are shared by reference; without
+        # this, mutating timestamps (below) would leak into the loaded source
+        # XML tree. Also lets us safely re-emit the same source for multiple
+        # outputs in a single run.
+        delay = result.audio_start_seconds
         for child in original_track:
-            new_track.append(child)
+            new_child = copy.deepcopy(child)
+            if delay > 0:
+                self._shift_grid_attrs(new_child, delay)
+            new_track.append(new_child)
         return new_track
+
+    @staticmethod
+    def _shift_grid_attrs(element: ET.Element, delay_seconds: float) -> None:
+        """Shift TEMPO.Inizio and POSITION_MARK.Start/End forward by delay.
+
+        Fixes the FLAC -> MP3 grid drift: ffmpeg's libmp3lame advances the
+        audio stream's start_time by the encoder delay (~25 ms at 44.1 kHz)
+        but doesn't fill the LAME info-tag delay field, so Rekordbox can't
+        skip the padding -- the audible beat lands `delay` seconds after the
+        grid marker. Shifting the timestamps forward by the observed PTS
+        aligns the grid with the waveform.
+
+        Lossless outputs report delay=0 and this is a no-op. Format strings
+        preserve the rekordbox convention of 3 decimal places.
+        """
+        if element.tag == "TEMPO":
+            attrs = ("Inizio",)
+        elif element.tag == "POSITION_MARK":
+            attrs = ("Start", "End")
+        else:
+            return
+        for attr in attrs:
+            raw = element.get(attr)
+            if raw is None:
+                continue
+            try:
+                shifted = float(raw) + delay_seconds
+            except ValueError:
+                continue
+            element.set(attr, f"{shifted:.3f}")
 
     @staticmethod
     def sanitize_filename(filename: str) -> str:
