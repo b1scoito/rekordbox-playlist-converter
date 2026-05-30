@@ -62,7 +62,7 @@ CDJ_MODELS: dict[str, dict[str, Any]] = {
         "formats": ["flac", "aiff", "wav", "aac", "mp3"],
         "max_quality": {"flac": "48kHz/24-bit", "aac": "48kHz/16-bit"},
         "recommended": "flac",
-        "notes": "FLAC support added in 2019 FW update",
+        "notes": "FLAC support added in firmware 1.10 (2020); no ALAC",
     },
     "XDJ-RX3": {
         "year": 2021,
