@@ -34,26 +34,26 @@ class TestPathUtilities:
         assert self.converter.url_to_path("file:///Users/test/track.mp3") is None
 
     def test_sanitize_filename_removes_invalid_chars(self):
-        sanitized = self.converter._sanitize_filename('Artist - Track <Name> "Test"')
+        sanitized = self.converter.sanitize_filename('Artist - Track <Name> "Test"')
         assert "<" not in sanitized
         assert ">" not in sanitized
         assert '"' not in sanitized
         assert "_" in sanitized
 
     def test_sanitize_filename_removes_all_invalid_chars(self):
-        sanitized = self.converter._sanitize_filename(r'Test<>:"/\|?*Track')
+        sanitized = self.converter.sanitize_filename(r'Test<>:"/\|?*Track')
         for char in r'<>:"/\|?*':
             assert char not in sanitized
 
     def test_sanitize_filename_preserves_valid_chars(self):
         filename = "Artist - Track Name (Remix) [2024]"
-        assert self.converter._sanitize_filename(filename) == filename
+        assert self.converter.sanitize_filename(filename) == filename
 
     def test_sanitize_filename_limits_length(self):
-        assert len(self.converter._sanitize_filename("A" * 300)) == 200
+        assert len(self.converter.sanitize_filename("A" * 300)) == 200
 
     def test_sanitize_filename_unicode_characters(self):
-        sanitized = self.converter._sanitize_filename("Artist - Track Ñame Café")
+        sanitized = self.converter.sanitize_filename("Artist - Track Ñame Café")
         assert "Ñ" in sanitized
         assert "é" in sanitized
 

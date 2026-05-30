@@ -1,7 +1,7 @@
 [project]
 name = "rekordbox-playlist-converter"
 version = "0.1.0"
-description = "Convert Rekordbox playlists with automatic format selection for Pioneer DJ CDJ/XDJ equipment"
+description = "Convert Rekordbox playlists with automatic format selection for Pioneer DJ / AlphaTheta CDJ/XDJ equipment"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -16,6 +16,7 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dependencies = [
@@ -24,7 +25,9 @@ dependencies = [
 ]
 
 [project.scripts]
-rekordbox-converter = "main:app"
+# Entry point lives in cli.py; main.py remains as a thin shim so the dev
+# workflow `python main.py ...` continues to work as documented.
+rekordbox-converter = "cli:app"
 
 [project.urls]
 Homepage = "https://github.com/b1scoito/rekordbox-playlist-converter"
@@ -45,7 +48,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+# --strict-markers makes typo'd @pytest.mark.xxx fail instead of silently
+# becoming dead code; --strict-config does the same for ini options.
+addopts = "-v --tb=short --strict-markers --strict-config"
 
 [tool.coverage.run]
 source = ["_console", "models", "quality", "converter", "cli", "main"]
@@ -65,11 +70,35 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+# E/W pycodestyle, F pyflakes, I isort, N pep8-naming, UP pyupgrade,
+# B flake8-bugbear (common bug patterns), SIM flake8-simplify (clarity),
+# RUF ruff-specific rules. The baseline catches real bugs (mutable
+# default args, unused-but-assigned vars) without being noisy.
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
 ignore = []
 
 [tool.pyright]
-typeCheckingMode = "standard"
+# strict surfaces missing/implicit-Any annotations across the whole tree.
+# The codebase was already mostly typed; production code is clean under
+# strict mode. Tests are relaxed below because the patterns that trip
+# strict (accessing private methods, untyped MagicMock returns, untyped
+# parametrize fixtures) are legitimate for test code.
+typeCheckingMode = "strict"
 reportMissingImports = true
 reportMissingTypeStubs = false
 pythonVersion = "3.11"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+# Tests need the repo root on path to import flat modules (converter,
+# quality, models, ...). pytest already does this at runtime.
+extraPaths = ["."]
+# Tests are allowed to: reach into private members of the SUT, omit
+# parameter annotations on test methods / fixtures, and accept the
+# MagicMock-typed values that subprocess patches return.
+reportPrivateUsage = "none"
+reportMissingParameterType = "none"
+reportUnknownParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"

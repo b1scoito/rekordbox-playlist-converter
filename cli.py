@@ -187,7 +187,7 @@ def convert_cmd(
             if output_xml:
                 output_xml_path = output_xml
             else:
-                safe_name = converter._sanitize_filename(playlist_name)
+                safe_name = converter.sanitize_filename(playlist_name)
                 output_xml_path = output / f"{safe_name}.xml"
             converter.save_standalone_xml(str(output_xml_path))
 

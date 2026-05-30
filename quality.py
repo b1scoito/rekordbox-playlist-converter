@@ -6,6 +6,7 @@ conversion pipeline, and isolating them from the rest of the code keeps that
 property visible.
 """
 
+import contextlib
 import re
 import subprocess
 from pathlib import Path
@@ -34,7 +35,7 @@ def parse_max_quality(spec: str) -> tuple[int | None, int | None]:
     bit_depth: int | None = None
     sr_match = re.search(r"([\d.]+)\s*kHz", spec, re.IGNORECASE)
     if sr_match:
-        sample_rate = int(round(float(sr_match.group(1)) * 1000))
+        sample_rate = round(float(sr_match.group(1)) * 1000)
     bd_match = re.search(r"(\d+)\s*-?\s*bit", spec, re.IGNORECASE)
     if bd_match:
         bit_depth = int(bd_match.group(1))
@@ -84,10 +85,8 @@ def probe(
             codec_name = value
             continue
         if key == "duration":
-            try:
+            with contextlib.suppress(ValueError):
                 duration = float(value)
-            except ValueError:
-                pass
             continue
         try:
             num = int(value)
@@ -98,10 +97,10 @@ def probe(
         elif key == "bit_rate":
             bitrate_bps = num
         # bits_per_raw_sample is the accurate one for lossless (e.g. 24);
-        # bits_per_sample is the container fallback.
-        elif key == "bits_per_raw_sample" and num > 0:
-            bit_depth = num
-        elif key == "bits_per_sample" and num > 0 and bit_depth is None:
+        # bits_per_sample is the container fallback (only when raw is absent).
+        elif num > 0 and (
+            key == "bits_per_raw_sample" or (key == "bits_per_sample" and bit_depth is None)
+        ):
             bit_depth = num
     return (sample_rate, bit_depth, codec_name, bitrate_bps, duration)
 
@@ -163,9 +162,8 @@ def can_passthrough(
         return True  # MP3 has no PCM depth dimension
     if source_bd is None:
         return False  # need known depth to prove it fits the cap
-    if target_bd is not None and source_bd > target_bd:
-        return False
-    return True
+    # Source depth must be within the target cap (or cap unset = unbounded).
+    return target_bd is None or source_bd <= target_bd
 
 
 def existing_matches_plan(

@@ -229,9 +229,7 @@ class RekordboxPlaylistConverter:
 
         track_name = track_element.get("Name", "Unknown")
         artist = track_element.get("Artist", "")
-        safe_filename = self._sanitize_filename(
-            f"{artist} - {track_name}" if artist else track_name
-        )
+        safe_filename = self.sanitize_filename(f"{artist} - {track_name}" if artist else track_name)
         output_path = output_dir / f"{safe_filename}.{self.format_settings.ext}"
 
         source_sr, source_bd, source_codec, _source_bitrate, source_duration = probe(source_path)
@@ -265,7 +263,7 @@ class RekordboxPlaylistConverter:
                         target_sample_rate=existing_sr,
                         target_bit_depth=existing_bd,
                         output_bitrate_kbps=(
-                            int(round(existing_bitrate_bps / 1000))
+                            round(existing_bitrate_bps / 1000)
                             if existing_bitrate_bps is not None
                             else None
                         ),
@@ -435,7 +433,7 @@ class RekordboxPlaylistConverter:
             target_sample_rate=out_sr if out_sr is not None else planned_result.target_sample_rate,
             target_bit_depth=out_bd if out_bd is not None else planned_result.target_bit_depth,
             output_bitrate_kbps=(
-                int(round(out_bitrate_bps / 1000)) if out_bitrate_bps is not None else None
+                round(out_bitrate_bps / 1000) if out_bitrate_bps is not None else None
             ),
             output_size_bytes=size_bytes,
             duration_seconds=(
@@ -523,7 +521,7 @@ class RekordboxPlaylistConverter:
         return new_track
 
     @staticmethod
-    def _sanitize_filename(filename: str) -> str:
+    def sanitize_filename(filename: str) -> str:
         """Drop characters that aren't safe across macOS / Windows / Linux."""
         invalid_chars = '<>:"/\\|?*'
         for char in invalid_chars:
@@ -691,11 +689,8 @@ class RekordboxPlaylistConverter:
     @staticmethod
     def _format_quality(sample_rate: int | None, bit_depth: int | None) -> str:
         """Render '44.1k/16' style quality summary for the dry-run table."""
-        if sample_rate is None:
-            sr_str = "?"
-        else:
-            # `:g` trims trailing zeros: 44100/1000 -> 44.1, 48000/1000 -> 48.
-            sr_str = f"{sample_rate / 1000:g}k"
+        # `:g` trims trailing zeros: 44100/1000 -> 44.1, 48000/1000 -> 48.
+        sr_str = "?" if sample_rate is None else f"{sample_rate / 1000:g}k"
         bd_str = f"/{bit_depth}" if bit_depth is not None else ""
         return sr_str + bd_str
 
@@ -759,7 +754,9 @@ class RekordboxPlaylistConverter:
 
     def save_standalone_xml(self, output_path: str) -> Path:
         """Write the standalone XML to disk (original XML is never touched)."""
-        if not hasattr(self, "standalone_tree") or self.standalone_tree is None:
+        # standalone_tree is class-declared but only bound by create_standalone_xml;
+        # hasattr is enough to detect the not-yet-built case.
+        if not hasattr(self, "standalone_tree"):
             raise ValueError("No standalone XML created. Call create_standalone_xml() first.")
         output_file = Path(output_path)
         self._indent_xml(self.standalone_root)
